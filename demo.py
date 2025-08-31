@@ -56,6 +56,72 @@ def print_tool_examples():
                 ]
             },
             "curl": 'curl -X POST "http://localhost:8000/invoke/organize_files" -H "Content-Type: application/json" -d \'{"rules": [{"action": "move", "search_query": "*.pdf", "target_folder": "PDFs"}]}\''
+        },
+        # New enhanced tools examples
+        "upload_file": {
+            "description": "Upload a file to OneDrive",
+            "data": {"file_path": "/local/path/file.txt", "target_path": "/Documents/file.txt"},
+            "curl": 'curl -X POST "http://localhost:8000/invoke/upload_file" -H "Content-Type: application/json" -d \'{"file_path": "/local/path/file.txt", "target_path": "/Documents/file.txt"}\''
+        },
+        "download_file": {
+            "description": "Download a file from OneDrive",
+            "data": {"file_id": "file-id-here", "local_path": "/local/download/file.txt"},
+            "curl": 'curl -X POST "http://localhost:8000/invoke/download_file" -H "Content-Type: application/json" -d \'{"file_id": "file-id-here", "local_path": "/local/download/file.txt"}\''
+        },
+        "copy_file": {
+            "description": "Copy a file to a new location",
+            "data": {"file_id": "file-id-here", "new_name": "copy_of_file.txt", "target_path": "/Backups"},
+            "curl": 'curl -X POST "http://localhost:8000/invoke/copy_file" -H "Content-Type: application/json" -d \'{"file_id": "file-id-here", "new_name": "copy_of_file.txt", "target_path": "/Backups"}\''
+        },
+        "rename_file": {
+            "description": "Rename a file or folder",
+            "data": {"file_id": "file-id-here", "new_name": "new_filename.txt"},
+            "curl": 'curl -X POST "http://localhost:8000/invoke/rename_file" -H "Content-Type: application/json" -d \'{"file_id": "file-id-here", "new_name": "new_filename.txt"}\''
+        },
+        "get_file_content": {
+            "description": "Get content of text files",
+            "data": {"file_id": "file-id-here"},
+            "curl": 'curl -X POST "http://localhost:8000/invoke/get_file_content" -H "Content-Type: application/json" -d \'{"file_id": "file-id-here"}\''
+        },
+        "get_file_thumbnail": {
+            "description": "Get file thumbnails",
+            "data": {"file_id": "file-id-here", "size": "large"},
+            "curl": 'curl -X POST "http://localhost:8000/invoke/get_file_thumbnail" -H "Content-Type: application/json" -d \'{"file_id": "file-id-here", "size": "large"}\''
+        },
+        "search_by_type": {
+            "description": "Search files by type/extension",
+            "data": {"file_type": "*.pdf", "limit": 50},
+            "curl": 'curl -X POST "http://localhost:8000/invoke/search_by_type" -H "Content-Type: application/json" -d \'{"file_type": "*.pdf", "limit": 50}\''
+        },
+        "search_by_date": {
+            "description": "Search files by modification date",
+            "data": {"start_date": "2024-01-01T00:00:00Z", "end_date": "2024-12-31T23:59:59Z", "limit": 50},
+            "curl": 'curl -X POST "http://localhost:8000/invoke/search_by_date" -H "Content-Type: application/json" -d \'{"start_date": "2024-01-01T00:00:00Z", "end_date": "2024-12-31T23:59:59Z", "limit": 50}\''
+        },
+        "get_recent_files": {
+            "description": "Get recently modified files",
+            "data": {"days": 7, "limit": 50},
+            "curl": 'curl -X POST "http://localhost:8000/invoke/get_recent_files" -H "Content-Type: application/json" -d \'{"days": 7, "limit": 50}\''
+        },
+        "get_storage_usage": {
+            "description": "Get OneDrive storage statistics",
+            "data": {},
+            "curl": 'curl -X POST "http://localhost:8000/invoke/get_storage_usage" -H "Content-Type: application/json" -d \'{}\''
+        },
+        "bulk_move": {
+            "description": "Move multiple files to a target folder",
+            "data": {"file_ids": ["file1-id", "file2-id"], "target_path": "/Archive"},
+            "curl": 'curl -X POST "http://localhost:8000/invoke/bulk_move" -H "Content-Type: application/json" -d \'{"file_ids": ["file1-id", "file2-id"], "target_path": "/Archive"}\''
+        },
+        "bulk_delete": {
+            "description": "Delete multiple files",
+            "data": {"file_ids": ["file1-id", "file2-id"]},
+            "curl": 'curl -X POST "http://localhost:8000/invoke/bulk_delete" -H "Content-Type: application/json" -d \'{"file_ids": ["file1-id", "file2-id"]}\''
+        },
+        "bulk_copy": {
+            "description": "Copy multiple files to a target folder",
+            "data": {"file_ids": ["file1-id", "file2-id"], "target_path": "/Backups"},
+            "curl": 'curl -X POST "http://localhost:8000/invoke/bulk_copy" -H "Content-Type: application/json" -d \'{"file_ids": ["file1-id", "file2-id"], "target_path": "/Backups"}\''
         }
     }
     
@@ -88,9 +154,38 @@ def print_setup_instructions():
     print("   - Visit: http://localhost:8000/docs")
     print("   - Use the examples above to test endpoints")
 
+def print_new_features():
+    """Print information about new enhanced features"""
+    print("\n🚀 New Enhanced Features:")
+    print("=" * 60)
+    
+    print("✨ File Operations:")
+    print("   • Upload files to OneDrive")
+    print("   • Download files from OneDrive")
+    print("   • Copy files to different locations")
+    print("   • Rename files and folders")
+    
+    print("\n🔍 Advanced Search:")
+    print("   • Search by file type/extension")
+    print("   • Search by modification date")
+    print("   • Get recently modified files")
+    print("   • Enhanced file information")
+    
+    print("\n📊 Analytics & Insights:")
+    print("   • Storage usage statistics")
+    print("   • File activity tracking")
+    print("   • Enhanced metadata retrieval")
+    
+    print("\n⚡ Bulk Operations:")
+    print("   • Move multiple files at once")
+    print("   • Delete multiple files at once")
+    print("   • Copy multiple files at once")
+    print("   • Batch organization rules")
+
 def main():
     """Main demo function"""
     print_api_info()
+    print_new_features()
     print_tool_examples()
     print_setup_instructions()
     
@@ -98,9 +193,8 @@ def main():
     print("🎯 Next Steps:")
     print("1. Configure your Microsoft Graph API credentials in .env")
     print("2. Start the server with: python run.py")
-    print("3. Test the API endpoints")
-    print("4. Deploy to Render when ready")
-    print("=" * 60)
+    print("3. Explore the enhanced tools via the API documentation")
+    print("4. Test file operations with the new capabilities")
 
 if __name__ == "__main__":
     main()
