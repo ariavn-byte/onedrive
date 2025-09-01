@@ -1,0 +1,840 @@
+{
+  "swagger": "2.0",
+  "host": "driven-true-hookworm.ngrok-free.app",
+  "schemes": [
+    "https"
+  ],
+  "definitions": {
+    "BaseResponse": {
+      "type": "object",
+      "properties": {
+        "action": {
+          "type": "string"
+        },
+        "success": {
+          "type": "boolean"
+        },
+        "message": {
+          "type": "string"
+        },
+        "mode": {
+          "type": "string",
+          "example": "demo"
+        }
+      }
+    },
+    "OrganizeResponse": {
+      "allOf": [
+        {
+          "$ref": "#/definitions/BaseResponse"
+        },
+        {
+          "type": "object",
+          "properties": {
+            "data": {
+              "type": "object",
+              "properties": {
+                "files_organized": {
+                  "type": "integer"
+                },
+                "folders_created": {
+                  "type": "integer"
+                },
+                "ai_suggestions": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "DuplicateResponse": {
+      "allOf": [
+        {
+          "$ref": "#/definitions/BaseResponse"
+        },
+        {
+          "type": "object",
+          "properties": {
+            "data": {
+              "type": "object",
+              "properties": {
+                "duplicates_found": {
+                  "type": "integer"
+                },
+                "space_wasted": {
+                  "type": "string"
+                },
+                "duplicate_groups": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "files": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      },
+                      "size": {
+                        "type": "string"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "AnalyticsResponse": {
+      "allOf": [
+        {
+          "$ref": "#/definitions/BaseResponse"
+        },
+        {
+          "type": "object",
+          "properties": {
+            "data": {
+              "type": "object",
+              "properties": {
+                "period_days": {
+                  "type": "integer"
+                },
+                "total_storage_used": {
+                  "type": "string"
+                },
+                "total_files": {
+                  "type": "integer"
+                },
+                "most_used_folders": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "name": {
+                        "type": "string"
+                      },
+                      "access_count": {
+                        "type": "integer"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "CleanupResponse": {
+      "allOf": [
+        {
+          "$ref": "#/definitions/BaseResponse"
+        },
+        {
+          "type": "object",
+          "properties": {
+            "data": {
+              "type": "object",
+              "properties": {
+                "files_processed": {
+                  "type": "integer"
+                },
+                "space_freed": {
+                  "type": "string"
+                },
+                "action_taken": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "SearchResponse": {
+      "allOf": [
+        {
+          "$ref": "#/definitions/BaseResponse"
+        },
+        {
+          "type": "object",
+          "properties": {
+            "data": {
+              "type": "object",
+              "properties": {
+                "results_found": {
+                  "type": "integer"
+                },
+                "results": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "name": {
+                        "type": "string"
+                      },
+                      "path": {
+                        "type": "string"
+                      },
+                      "size": {
+                        "type": "string"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "BulkOperationResponse": {
+      "allOf": [
+        {
+          "$ref": "#/definitions/BaseResponse"
+        },
+        {
+          "type": "object",
+          "properties": {
+            "data": {
+              "type": "object",
+              "properties": {
+                "files_processed": {
+                  "type": "integer"
+                },
+                "destination": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "StorageReportResponse": {
+      "allOf": [
+        {
+          "$ref": "#/definitions/BaseResponse"
+        },
+        {
+          "type": "object",
+          "properties": {
+            "data": {
+              "type": "object",
+              "properties": {
+                "total_storage": {
+                  "type": "string"
+                },
+                "available_storage": {
+                  "type": "string"
+                },
+                "recommendations": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "SharingResponse": {
+      "allOf": [
+        {
+          "$ref": "#/definitions/BaseResponse"
+        },
+        {
+          "type": "object",
+          "properties": {
+            "data": {
+              "type": "object",
+              "properties": {
+                "share_link": {
+                  "type": "string"
+                },
+                "permissions": {
+                  "type": "string"
+                },
+                "expires": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  },
+  "x-ms-openai-manifest": {
+    "humanName": "OneDrive Organizer API",
+    "modelDescription": "Comprehensive OneDrive file management and organization API for Microsoft 365 Copilot integration",
+    "contactEmail": "",
+    "legalUrl": ""
+  },
+  "info": {
+    "title": "OneDrive Organizer API",
+    "description": "Comprehensive OneDrive file management and organization API for Microsoft 365 Copilot integration",
+    "contact": {
+      "name": "OneDrive Organizer Support",
+      "email": "support@onedriveorganizer.com"
+    },
+    "version": "1.0.0"
+  },
+  "paths": {
+    "/health": {
+      "get": {
+        "summary": "Health Check",
+        "description": "Check API health status",
+        "operationId": "healthCheck",
+        "produces": [
+          "application/json"
+        ],
+        "responses": {
+          "200": {
+            "description": "API is healthy",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "status": {
+                  "type": "string",
+                  "example": "healthy"
+                },
+                "mode": {
+                  "type": "string",
+                  "example": "demo"
+                }
+              }
+            }
+          }
+        },
+        "x-ms-openai-data": {
+          "openai-enabled": true,
+          "operations": [
+            {
+              "operationId": "healthCheck",
+              "x-ms-require-user-confirmation": false,
+              "summary": "Health Check",
+              "description": "Check API health status"
+            }
+          ]
+        }
+      }
+    },
+    "/organize/smart": {
+      "post": {
+        "summary": "Smart File Organization",
+        "description": "AI-powered organization of files into logical folder structures",
+        "operationId": "organizeFilesSmart",
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "in": "body",
+            "name": "body",
+            "required": true,
+            "schema": {
+              "required": [
+                "source_path"
+              ],
+              "type": "object",
+              "properties": {
+                "source_path": {
+                  "description": "Path to organize",
+                  "type": "string",
+                  "example": "/Documents"
+                }
+              }
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Files organized successfully",
+            "schema": {
+              "$ref": "#/definitions/OrganizeResponse"
+            }
+          }
+        },
+        "x-ms-openai-data": {
+          "openai-enabled": true,
+          "operations": [
+            {
+              "operationId": "organizeFilesSmart",
+              "x-ms-require-user-confirmation": false,
+              "summary": "Smart File Organization",
+              "description": "AI-powered organization of files into logical folder structures"
+            }
+          ]
+        }
+      }
+    },
+    "/duplicate/find": {
+      "get": {
+        "summary": "Find Duplicate Files",
+        "description": "Detect duplicate files in OneDrive to save storage space",
+        "operationId": "findDuplicates",
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "path",
+            "description": "Folder path to search",
+            "type": "string",
+            "default": "/"
+          },
+          {
+            "in": "query",
+            "name": "threshold",
+            "description": "Similarity threshold (0-1)",
+            "type": "number",
+            "format": "float",
+            "default": 0.95,
+            "maximum": 1,
+            "minimum": 0
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Duplicates found",
+            "schema": {
+              "$ref": "#/definitions/DuplicateResponse"
+            }
+          }
+        },
+        "x-ms-openai-data": {
+          "openai-enabled": true,
+          "operations": [
+            {
+              "operationId": "findDuplicates",
+              "x-ms-require-user-confirmation": false,
+              "summary": "Find Duplicate Files",
+              "description": "Detect duplicate files in OneDrive to save storage space"
+            }
+          ]
+        }
+      }
+    },
+    "/analytics/usage": {
+      "get": {
+        "summary": "Get Storage Analytics",
+        "description": "Show OneDrive usage statistics and recommendations",
+        "operationId": "getStorageAnalytics",
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "days",
+            "description": "Number of days for analytics",
+            "type": "integer",
+            "default": 30,
+            "maximum": 365,
+            "minimum": 1
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Analytics data retrieved",
+            "schema": {
+              "$ref": "#/definitions/AnalyticsResponse"
+            }
+          }
+        },
+        "x-ms-openai-data": {
+          "openai-enabled": true,
+          "operations": [
+            {
+              "operationId": "getStorageAnalytics",
+              "x-ms-require-user-confirmation": false,
+              "summary": "Get Storage Analytics",
+              "description": "Show OneDrive usage statistics and recommendations"
+            }
+          ]
+        }
+      }
+    },
+    "/cleanup/old-files": {
+      "post": {
+        "summary": "Cleanup Old Files",
+        "description": "Archive or delete files older than specified days",
+        "operationId": "cleanupOldFiles",
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "in": "body",
+            "name": "body",
+            "required": true,
+            "schema": {
+              "required": [
+                "days_old",
+                "folder_path"
+              ],
+              "type": "object",
+              "properties": {
+                "days_old": {
+                  "description": "Age threshold in days",
+                  "type": "integer",
+                  "example": 365
+                },
+                "folder_path": {
+                  "description": "Folder to clean up",
+                  "type": "string",
+                  "example": "/Documents"
+                },
+                "action": {
+                  "description": "Action to take",
+                  "default": "archive",
+                  "enum": [
+                    "archive",
+                    "delete"
+                  ],
+                  "type": "string"
+                }
+              }
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Cleanup completed",
+            "schema": {
+              "$ref": "#/definitions/CleanupResponse"
+            }
+          }
+        },
+        "x-ms-openai-data": {
+          "openai-enabled": true,
+          "operations": [
+            {
+              "operationId": "cleanupOldFiles",
+              "x-ms-require-user-confirmation": false,
+              "summary": "Cleanup Old Files",
+              "description": "Archive or delete files older than specified days"
+            }
+          ]
+        }
+      }
+    },
+    "/organize/by-type": {
+      "post": {
+        "summary": "Organize Files by Type",
+        "description": "Organize files into folders based on file type",
+        "operationId": "organizeFilesByType",
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "in": "body",
+            "name": "body",
+            "required": true,
+            "schema": {
+              "required": [
+                "source_path"
+              ],
+              "type": "object",
+              "properties": {
+                "source_path": {
+                  "description": "Path to organize",
+                  "type": "string",
+                  "example": "/Documents"
+                },
+                "create_folders": {
+                  "description": "Whether to create new folders",
+                  "default": true,
+                  "type": "boolean"
+                }
+              }
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Files organized by type",
+            "schema": {
+              "$ref": "#/definitions/OrganizeResponse"
+            }
+          }
+        },
+        "x-ms-openai-data": {
+          "openai-enabled": true,
+          "operations": [
+            {
+              "operationId": "organizeFilesByType",
+              "x-ms-require-user-confirmation": false,
+              "summary": "Organize Files by Type",
+              "description": "Organize files into folders based on file type"
+            }
+          ]
+        }
+      }
+    },
+    "/search/advanced": {
+      "post": {
+        "summary": "Advanced Search",
+        "description": "Search files with advanced filters",
+        "operationId": "searchAdvanced",
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "in": "body",
+            "name": "body",
+            "required": true,
+            "schema": {
+              "required": [
+                "query"
+              ],
+              "type": "object",
+              "properties": {
+                "query": {
+                  "description": "Search query",
+                  "type": "string",
+                  "example": "project"
+                },
+                "filters": {
+                  "description": "Search filters",
+                  "type": "object",
+                  "properties": {
+                    "file_type": {
+                      "type": "string",
+                      "example": "docx"
+                    },
+                    "date_range": {
+                      "type": "string",
+                      "example": "last_month"
+                    },
+                    "size_range": {
+                      "type": "string",
+                      "example": "1MB-10MB"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Search results",
+            "schema": {
+              "$ref": "#/definitions/SearchResponse"
+            }
+          }
+        },
+        "x-ms-openai-data": {
+          "openai-enabled": true,
+          "operations": [
+            {
+              "operationId": "searchAdvanced",
+              "x-ms-require-user-confirmation": false,
+              "summary": "Advanced Search",
+              "description": "Search files with advanced filters"
+            }
+          ]
+        }
+      }
+    },
+    "/bulk/move": {
+      "post": {
+        "summary": "Bulk Move Files",
+        "description": "Move multiple files to a destination folder",
+        "operationId": "bulkMoveFiles",
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "in": "body",
+            "name": "body",
+            "required": true,
+            "schema": {
+              "required": [
+                "file_paths",
+                "destination"
+              ],
+              "type": "object",
+              "properties": {
+                "file_paths": {
+                  "description": "List of file paths to move",
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "example": [
+                    "/temp/file1.txt",
+                    "/temp/file2.txt"
+                  ]
+                },
+                "destination": {
+                  "description": "Destination folder path",
+                  "type": "string",
+                  "example": "/Documents/Archive"
+                }
+              }
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Files moved successfully",
+            "schema": {
+              "$ref": "#/definitions/BulkOperationResponse"
+            }
+          }
+        },
+        "x-ms-openai-data": {
+          "openai-enabled": true,
+          "operations": [
+            {
+              "operationId": "bulkMoveFiles",
+              "x-ms-require-user-confirmation": false,
+              "summary": "Bulk Move Files",
+              "description": "Move multiple files to a destination folder"
+            }
+          ]
+        }
+      }
+    },
+    "/report/storage": {
+      "get": {
+        "summary": "Generate Storage Report",
+        "description": "Generate detailed storage analysis report",
+        "operationId": "generateStorageReport",
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "format",
+            "description": "Report format",
+            "type": "string",
+            "default": "json",
+            "enum": [
+              "json",
+              "pdf",
+              "csv"
+            ]
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Storage report generated",
+            "schema": {
+              "$ref": "#/definitions/StorageReportResponse"
+            }
+          }
+        },
+        "x-ms-openai-data": {
+          "openai-enabled": true,
+          "operations": [
+            {
+              "operationId": "generateStorageReport",
+              "x-ms-require-user-confirmation": false,
+              "summary": "Generate Storage Report",
+              "description": "Generate detailed storage analysis report"
+            }
+          ]
+        }
+      }
+    },
+    "/share/create-link": {
+      "post": {
+        "summary": "Create Sharing Link",
+        "description": "Create a sharing link for a file with specified permissions",
+        "operationId": "createSharingLink",
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "in": "body",
+            "name": "body",
+            "required": true,
+            "schema": {
+              "required": [
+                "file_path"
+              ],
+              "type": "object",
+              "properties": {
+                "file_path": {
+                  "description": "Path to the file to share",
+                  "type": "string",
+                  "example": "/Documents/report.pdf"
+                },
+                "permissions": {
+                  "description": "Permission level",
+                  "default": "view",
+                  "enum": [
+                    "view",
+                    "edit"
+                  ],
+                  "type": "string"
+                },
+                "expires": {
+                  "description": "Expiration date (YYYY-MM-DD)",
+                  "type": "string",
+                  "example": "2024-02-15"
+                }
+              }
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Sharing link created",
+            "schema": {
+              "$ref": "#/definitions/SharingResponse"
+            }
+          }
+        },
+        "x-ms-openai-data": {
+          "openai-enabled": true,
+          "operations": [
+            {
+              "operationId": "createSharingLink",
+              "x-ms-require-user-confirmation": false,
+              "summary": "Create Sharing Link",
+              "description": "Create a sharing link for a file with specified permissions"
+            }
+          ]
+        }
+      }
+    }
+  }
+}

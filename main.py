@@ -1,16 +1,11 @@
+from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request, HTTPException
 from fastapi.responses import JSONResponse
 from function_app import _handle, ALLOWED_TOOLS
 import config
 
-app = FastAPI(
-    title="OneDrive Organizer MCP Server",
-    description="A FastAPI-based MCP server for organizing OneDrive content using Microsoft Graph API",
-    version="1.0.0"
-)
-
-@app.on_event("startup")
-async def startup_event():
+@asynccontextmanager
+async def lifespan(app: FastAPI):
     """Validate configuration on startup"""
     try:
         config.validate_config()
@@ -19,6 +14,14 @@ async def startup_event():
         print(f"❌ Configuration error: {e}")
         print(config.CONFIG_HELP)
         raise e
+    yield
+
+app = FastAPI(
+    title="OneDrive Organizer MCP Server",
+    description="A FastAPI-based MCP server for organizing OneDrive content using Microsoft Graph API",
+    version="1.0.0",
+    lifespan=lifespan
+)
 
 @app.get("/")
 async def root():

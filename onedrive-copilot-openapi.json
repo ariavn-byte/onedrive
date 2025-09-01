@@ -1,0 +1,251 @@
+{
+    "openapi": "3.0.0",
+    "info": {
+        "title": "OneDrive Organizer MCP Server",
+        "description": "A comprehensive OneDrive management API with 20 powerful tools for file operations, search, and organization. Perfect for personal OneDrive management and automation.",
+        "version": "2.0.0",
+        "contact": {
+            "name": "OneDrive Organizer",
+            "url": "https://github.com/ariavn-byte/onedrive"
+        }
+    },
+    "servers": [
+        {
+            "url": "https://onedrive-4csa.onrender.com",
+            "description": "Production server"
+        }
+    ],
+    "paths": {
+        "/": {
+            "get": {
+                "summary": "API Information",
+                "description": "Get information about the OneDrive Organizer MCP Server and available tools",
+                "operationId": "getApiInfo",
+                "responses": {
+                    "200": {
+                        "description": "API information and available tools",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "message": {
+                                            "type": "string"
+                                        },
+                                        "version": {
+                                            "type": "string"
+                                        },
+                                        "available_tools": {
+                                            "type": "array",
+                                            "items": {
+                                                "type": "string"
+                                            }
+                                        },
+                                        "docs": {
+                                            "type": "string"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/health": {
+            "get": {
+                "summary": "Health Check",
+                "description": "Check if the server is running and healthy",
+                "operationId": "healthCheck",
+                "responses": {
+                    "200": {
+                        "description": "Server health status",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "status": {
+                                            "type": "string"
+                                        },
+                                        "timestamp": {
+                                            "type": "string"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/tools": {
+            "get": {
+                "summary": "List Available Tools",
+                "description": "Get a list of all available OneDrive management tools",
+                "operationId": "listTools",
+                "responses": {
+                    "200": {
+                        "description": "List of available tools",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "tools": {
+                                            "type": "array",
+                                            "items": {
+                                                "type": "string"
+                                            }
+                                        },
+                                        "count": {
+                                            "type": "integer"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/invoke/{tool}": {
+            "post": {
+                "summary": "Invoke OneDrive Tool",
+                "description": "Execute a specific OneDrive management tool with provided parameters",
+                "operationId": "invokeTool",
+                "parameters": [
+                    {
+                        "name": "tool",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        },
+                        "description": "The name of the tool to invoke"
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "description": "Tool-specific parameters"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Tool execution result",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean"
+                                        },
+                                        "data": {
+                                            "type": "object"
+                                        },
+                                        "error": {
+                                            "type": "string"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid tool or parameters",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": false
+                                        },
+                                        "error": {
+                                            "type": "string"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "components": {
+        "schemas": {
+            "HTTPValidationError": {
+                "properties": {
+                    "detail": {
+                        "items": {
+                            "$ref": "#/components/schemas/ValidationError"
+                        },
+                        "type": "array",
+                        "title": "Detail"
+                    }
+                },
+                "type": "object",
+                "title": "HTTPValidationError"
+            },
+            "ValidationError": {
+                "properties": {
+                    "loc": {
+                        "items": {
+                            "anyOf": [
+                                {
+                                    "type": "string"
+                                },
+                                {
+                                    "type": "integer"
+                                }
+                            ]
+                        },
+                        "type": "array",
+                        "title": "Location"
+                    },
+                    "msg": {
+                        "type": "string",
+                        "title": "Message"
+                    },
+                    "type": {
+                        "type": "string",
+                        "title": "Error Type"
+                    }
+                },
+                "required": [
+                    "loc",
+                    "msg",
+                    "type"
+                ],
+                "title": "ValidationError"
+            }
+        }
+    },
+    "tags": [
+        {
+            "name": "File Management",
+            "description": "Core file operations like list, create, move, delete"
+        },
+        {
+            "name": "Search & Discovery",
+            "description": "Advanced search capabilities and file discovery"
+        },
+        {
+            "name": "Bulk Operations",
+            "description": "Operations on multiple files at once"
+        },
+        {
+            "name": "Analytics",
+            "description": "Storage usage and file analytics"
+        }
+    ]
+}

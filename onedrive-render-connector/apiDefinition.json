@@ -1,0 +1,131 @@
+{
+  "swagger": "2.0",
+  "info": {
+    "title": "OneDrive Organizer MCP Server",
+    "description": "A comprehensive OneDrive management API with 20 powerful tools for file operations, search, and organization. Perfect for personal OneDrive management and automation.",
+    "version": "2.0.0"
+  },
+  "host": "onedrive-4csa.onrender.com",
+  "schemes": [
+    "https"
+  ],
+  "basePath": "/",
+  "paths": {
+    "/invoke/{tool}": {
+      "post": {
+        "summary": "Invoke OneDrive Tool",
+        "description": "Execute a specific OneDrive management tool with provided parameters. Available tools: list_files, create_folder, move_file, delete_file, search_files, upload_file, download_file, copy_file, rename_file, get_file_info, get_file_content, get_file_thumbnail, search_by_type, search_by_date, get_recent_files, get_storage_usage, organize_files, bulk_move, bulk_delete, bulk_copy",
+        "operationId": "invokeOneDriveTool",
+        "parameters": [
+          {
+            "name": "tool",
+            "in": "path",
+            "required": true,
+            "type": "string",
+            "enum": [
+              "list_files",
+              "create_folder",
+              "move_file",
+              "delete_file",
+              "search_files",
+              "upload_file",
+              "download_file",
+              "copy_file",
+              "rename_file",
+              "get_file_info",
+              "get_file_content",
+              "get_file_thumbnail",
+              "search_by_type",
+              "search_by_date",
+              "get_recent_files",
+              "get_storage_usage",
+              "organize_files",
+              "bulk_move",
+              "bulk_delete",
+              "bulk_copy"
+            ],
+            "description": "The name of the OneDrive tool to invoke"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "type": "object",
+              "description": "Tool-specific parameters. Examples: For list_files use {\"folder_path\": \"/\"}, for create_folder use {\"folder_name\": \"New Folder\", \"parent_path\": \"/\"}, for search_files use {\"query\": \"search term\"}, for organize_files use {\"rules\": {}}"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Tool execution result",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "success": {
+                  "type": "boolean"
+                },
+                "data": {
+                  "type": "object"
+                },
+                "error": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid tool or parameters",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "success": {
+                  "type": "boolean",
+                  "example": false
+                },
+                "error": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "definitions": {
+    "HTTPValidationError": {
+      "type": "object",
+      "properties": {
+        "detail": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/ValidationError"
+          }
+        }
+      }
+    },
+    "ValidationError": {
+      "type": "object",
+      "properties": {
+        "loc": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "msg": {
+          "type": "string"
+        },
+        "type": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "loc",
+        "msg",
+        "type"
+      ]
+    }
+  }
+}
