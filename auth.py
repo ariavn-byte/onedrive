@@ -1,9 +1,7 @@
-import os
-from dotenv import load_dotenv
+# Import credentials from centralized config
+from config import CLIENT_ID, CLIENT_SECRET, TENANT_ID
 
-# Load environment variables from .env file
-load_dotenv()
-
-client_id = os.getenv("CLIENT_ID")
-client_secret = os.getenv("CLIENT_SECRET")
-tenant_id = os.getenv("TENANT_ID")
+# Re-export for backwards compatibility
+client_id = CLIENT_ID
+client_secret = CLIENT_SECRET
+tenant_id = TENANT_ID
