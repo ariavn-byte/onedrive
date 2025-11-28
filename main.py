@@ -2,6 +2,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request, HTTPException
 from fastapi.responses import JSONResponse
 from function_app import _handle, ALLOWED_TOOLS
+from datetime import datetime
 import config
 
 @asynccontextmanager
@@ -19,7 +20,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title="OneDrive Organizer MCP Server",
     description="A FastAPI-based MCP server for organizing OneDrive content using Microsoft Graph API",
-    version="1.0.0",
+    version="2.1.0",
     lifespan=lifespan
 )
 
@@ -28,7 +29,7 @@ async def root():
     """Root endpoint with API information"""
     return {
         "message": "OneDrive Organizer MCP Server",
-        "version": "1.0.0",
+        "version": "2.1.0",
         "available_tools": ALLOWED_TOOLS,
         "docs": "/docs"
     }
@@ -36,7 +37,7 @@ async def root():
 @app.get("/health")
 async def health_check():
     """Health check endpoint"""
-    return {"status": "healthy", "timestamp": "2024-01-01T00:00:00Z"}
+    return {"status": "healthy", "timestamp": datetime.utcnow().isoformat() + "Z"}
 
 @app.get("/tools")
 async def list_tools():

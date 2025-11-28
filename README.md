@@ -265,9 +265,42 @@ onedrive/
 - `Sites.ReadWrite.All` - Read and write all sites
 - `User.Read.All` - Read user information
 
-## 🆕 **What's New in v2.0**
+### 👤 User Authentication & Access
 
-### ✨ **Enhanced Toolset**
+**Important**: This server uses **Application-level permissions** (client credentials flow), which means:
+
+- ✅ **No user login required** - Works automatically with app credentials
+- ⚠️ **Accesses the first user's OneDrive** in your organization by default
+- 🔒 **Requires admin consent** for API permissions
+- 📋 **Optional user_id parameter** - You can specify which user's OneDrive to access
+
+**How to specify a specific user:**
+All tools accept an optional `user_id` parameter. If not provided, the server uses the first user in your organization.
+
+```bash
+# Access specific user's OneDrive
+curl -X POST "http://localhost:8000/invoke/list_files" \
+  -H "Content-Type: application/json" \
+  -d '{"folder_path": "/", "user_id": "user@domain.com"}'
+```
+
+**To get user IDs:**
+1. Go to Azure Portal > Azure Active Directory > Users
+2. Click on a user and copy their "Object ID" or "User principal name"
+
+**Alternative**: For multi-user scenarios with individual authentication, consider implementing delegated permissions with OAuth 2.0 authorization code flow.
+
+## 🆕 **What's New**
+
+### **v2.1 - Production Improvements**
+- ⚡ **Rate limiting protection** with automatic retry and exponential backoff
+- 🔄 **Automatic token refresh** when authentication expires
+- 🛡️ **Enhanced error handling** for 429 (rate limit) and 500+ (server errors)
+- 📝 **Configuration template** (.env.example) for easy setup
+- 🕐 **Real-time health check** with accurate timestamps
+- 📚 **User authentication documentation** for multi-user scenarios
+
+### **v2.0 - Enhanced Toolset**
 - **15 new tools** added to the original 7
 - **Microsoft Graph API compliant** implementation
 - **Fixed move_file** operation to use proper Graph API endpoints

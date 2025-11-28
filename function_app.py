@@ -1,5 +1,6 @@
 import json
 import requests
+import time
 from datetime import datetime, timedelta
 from typing import Dict, Any, List
 import auth
@@ -59,23 +60,58 @@ class OneDriveOrganizer:
         else:
             raise Exception(f"Authentication failed: {response.text}")
     
-    def _make_request(self, method: str, endpoint: str, **kwargs) -> Dict[str, Any]:
-        """Make authenticated request to Microsoft Graph API"""
+    def _make_request(self, method: str, endpoint: str, max_retries: int = 3, **kwargs) -> Dict[str, Any]:
+        """Make authenticated request to Microsoft Graph API with retry logic"""
         if not self.access_token:
             self._authenticate()
-        
+
         headers = {
             'Authorization': f'Bearer {self.access_token}',
             'Content-Type': 'application/json'
         }
-        
+
         url = f"{GRAPH_BASE_URL}{endpoint}"
-        response = requests.request(method, url, headers=headers, **kwargs)
-        
-        if response.status_code in [200, 201]:
-            return response.json()
-        else:
-            # Enhanced error handling
+
+        # Retry logic with exponential backoff
+        for attempt in range(max_retries + 1):
+            response = requests.request(method, url, headers=headers, **kwargs)
+
+            if response.status_code in [200, 201, 204]:
+                # Success - return response (handle 204 No Content for DELETE)
+                if response.status_code == 204:
+                    return {"success": True, "message": "Operation completed successfully"}
+                return response.json() if response.content else {"success": True}
+
+            elif response.status_code == 429:
+                # Rate limit hit - check Retry-After header
+                retry_after = int(response.headers.get('Retry-After', 2 ** attempt))
+                if attempt < max_retries:
+                    print(f"⚠️  Rate limit hit. Retrying after {retry_after} seconds... (Attempt {attempt + 1}/{max_retries})")
+                    time.sleep(retry_after)
+                    continue
+                else:
+                    raise Exception(f"Rate limit exceeded after {max_retries} retries. Please try again later.")
+
+            elif response.status_code == 401:
+                # Unauthorized - token might have expired, re-authenticate once
+                if attempt == 0:
+                    print("🔄 Token expired, re-authenticating...")
+                    self.access_token = None
+                    self._authenticate()
+                    headers['Authorization'] = f'Bearer {self.access_token}'
+                    continue
+                else:
+                    raise Exception(f"Authentication failed: {response.status_code} - {response.text}")
+
+            elif response.status_code >= 500:
+                # Server error - retry with exponential backoff
+                if attempt < max_retries:
+                    wait_time = 2 ** attempt
+                    print(f"⚠️  Server error ({response.status_code}). Retrying in {wait_time} seconds... (Attempt {attempt + 1}/{max_retries})")
+                    time.sleep(wait_time)
+                    continue
+
+            # For other errors, don't retry
             error_detail = response.text
             try:
                 error_json = response.json()
@@ -83,8 +119,11 @@ class OneDriveOrganizer:
                     error_detail = error_json['error'].get('message', error_detail)
             except:
                 pass
-            
+
             raise Exception(f"API request failed: {response.status_code} - {error_detail}")
+
+        # Should never reach here, but just in case
+        raise Exception("Maximum retry attempts exceeded")
     
     def _get_user_id(self) -> str:
         """Get the first available user ID for application-level access"""
