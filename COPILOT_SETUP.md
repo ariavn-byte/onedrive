@@ -26,8 +26,8 @@ Ensure your code is deployed to a public cloud provider like Render.
 ### Configure the Connection
 * **Server name**: `OneDrive Advanced` (or similar).
 * **Server description**: `Advanced OneDrive operations including moving large files and bulk management.`
-* **Server URL**: Your Render URL (e.g., `https://your-app-name.onrender.com/sse`).
-  * *Note: The standard endpoint for the MCP SDK over SSE is often `/sse`. If that fails, try the root `/` depending on final routing, but `/sse` is the convention for the transport.*
+* **Server URL**: Your Render URL (e.g., `https://your-app-name.onrender.com/mcp`).
+  * *Note: The standard endpoint for the MCP SDK is often `/mcp`.*
 * **Authentication**: Select **API Key**.
   * **Key type**: `Header`
   * **Header name**: `X-API-Key`
@@ -57,6 +57,6 @@ When a user asks: *"Move the file 'Budget.mp4' to the Archive folder"*
 
 ## Troubleshooting
 
-* **404 on Connection**: Ensure your Server URL is correct. Try adding `/sse` to the end of your Render URL.
+* **404 on Connection**: Ensure your Server URL is correct. It should end with `/mcp` (e.g., `https://...onrender.com/mcp`).
 * **Unauthorized**: Double-check that the `MCP_API_KEY` in Render matches the one you entered in Copilot Studio.
 * **Logs**: Check your Render logs to see if Copilot Studio is hitting your endpoints.
