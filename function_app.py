@@ -4,7 +4,6 @@ import time
 from datetime import datetime, timedelta
 from typing import Dict, Any, List
 import auth
-from azure.identity import DefaultAzureCredential
 
 # Microsoft Graph API endpoints
 GRAPH_BASE_URL = "https://graph.microsoft.com/v1.0"
@@ -38,26 +37,28 @@ class OneDriveOrganizer:
         # Don't authenticate immediately - wait until first request
     
     def _authenticate(self):
-        """Authenticate with Microsoft Graph API using Azure Identity (Client Secret or Managed Identity)"""
+        """Authenticate with Microsoft Graph API using client credentials flow"""
         if self.access_token:
             return  # Already authenticated
         
-        # Set environment variables for DefaultAzureCredential if they are present in config but not environment
-        import os
-        if auth.client_id and "AZURE_CLIENT_ID" not in os.environ:
-            os.environ["AZURE_CLIENT_ID"] = auth.client_id
-        if auth.tenant_id and "AZURE_TENANT_ID" not in os.environ:
-            os.environ["AZURE_TENANT_ID"] = auth.tenant_id
-        if auth.client_secret and "AZURE_CLIENT_SECRET" not in os.environ:
-            os.environ["AZURE_CLIENT_SECRET"] = auth.client_secret
+        # Check if we have credentials
+        if not auth.client_id or not auth.client_secret or not auth.tenant_id:
+            raise Exception("Missing Microsoft Graph API credentials. Please check your .env file.")
 
-        try:
-            credential = DefaultAzureCredential()
-            # Request token for Microsoft Graph
-            token = credential.get_token("https://graph.microsoft.com/.default")
-            self.access_token = token.token
-        except Exception as e:
-            raise Exception(f"Authentication failed: {str(e)}")
+        token_url = f"https://login.microsoftonline.com/{auth.tenant_id}/oauth2/v2.0/token"
+
+        data = {
+            'grant_type': 'client_credentials',
+            'client_id': auth.client_id,
+            'client_secret': auth.client_secret,
+            'scope': 'https://graph.microsoft.com/.default'
+        }
+
+        response = requests.post(token_url, data=data)
+        if response.status_code == 200:
+            self.access_token = response.json()['access_token']
+        else:
+            raise Exception(f"Authentication failed: {response.text}")
     
     def _make_request(self, method: str, endpoint: str, max_retries: int = 3, **kwargs) -> Dict[str, Any]:
         """Make authenticated request to Microsoft Graph API with retry logic"""
