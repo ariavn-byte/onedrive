@@ -4,25 +4,18 @@ This guide explains how to connect your OneDrive MCP Server to Microsoft Copilot
 
 ## 1. Deploy the Server
 
-Ensure your code is deployed to a public cloud provider like Render or Azure.
+Ensure your code is deployed to a public cloud provider like Render.
 
-### Authentication Options
-You can authenticate the server with Microsoft Graph using either a **Client Secret** or a **Federated Credential (Managed Identity)**.
-
-#### Option A: Client Secret (Render/Standard)
+### Render Configuration
 1. **Build Command**: `pip install -r requirements.txt`
 2. **Start Command**: `python mcp_server.py`
+   * Note: We are now running `mcp_server.py` instead of `main.py` or `uvicorn main:app`.
 3. **Environment Variables**:
+   Add the following variables in your Render dashboard:
    - `CLIENT_ID`: Your Azure App Client ID.
    - `CLIENT_SECRET`: Your Azure App Client Secret.
    - `TENANT_ID`: Your Azure Tenant ID.
    - `MCP_API_KEY`: A strong, random string (e.g., generate one with `openssl rand -hex 32`). **Save this key, you will need it for Copilot Studio.**
-
-#### Option B: Federated Credential / Managed Identity (Azure/Secure)
-If you configure **Workload Identity Federation** (e.g., trust Render via OIDC) or deploy to Azure Container Apps/App Service with a **Managed Identity**:
-1. You **do not** need to provide `CLIENT_SECRET`.
-2. Ensure `CLIENT_ID` (and optionally `TENANT_ID`) are set to the identity you are using.
-3. The server will automatically use the available identity to authenticate.
 
 ## 2. Connect to Copilot Studio
 
@@ -33,12 +26,14 @@ If you configure **Workload Identity Federation** (e.g., trust Render via OIDC) 
 ### Configure the Connection
 * **Server name**: `OneDrive Advanced` (or similar).
 * **Server description**: `Advanced OneDrive operations including moving large files and bulk management.`
-* **Server URL**: Your Server URL (e.g., `https://your-app-name.onrender.com/sse`).
-  * *Note: The standard endpoint for the MCP SDK over SSE is often `/sse`.*
+* **Server URL**: Your Render URL (e.g., `https://your-app-name.onrender.com/sse`).
+  * *Note: The standard endpoint for the MCP SDK over SSE is often `/sse`. If that fails, try the root `/` depending on final routing, but `/sse` is the convention for the transport.*
 * **Authentication**: Select **API Key**.
   * **Key type**: `Header`
   * **Header name**: `X-API-Key`
   * **Value**: Paste the `MCP_API_KEY` you created in the deployment step.
+
+Click **Create** or **Add**. Copilot Studio will connect to your server and list the available tools (e.g., `move_large_file`, `bulk_move`).
 
 ## 3. Add Native Tools (Hybrid Approach)
 
