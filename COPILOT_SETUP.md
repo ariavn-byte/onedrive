@@ -15,7 +15,7 @@ Ensure your code is deployed to a public cloud provider like Render.
    - `CLIENT_ID`: Your Azure App Client ID.
    - `CLIENT_SECRET`: Your Azure App Client Secret.
    - `TENANT_ID`: Your Azure Tenant ID.
-   - `MCP_API_KEY`: A strong, random string (e.g., generate one with `openssl rand -hex 32`). **Save this key, you will need it for Copilot Studio.**
+   - `MCP_API_KEY`: **Create this variable yourself.** This is NOT your Render account key. It is a password you invent (e.g., `my-super-secret-password-123`) to protect your server. **Save this value, you will need it for Copilot Studio.**
 
 ## 2. Connect to Copilot Studio
 
@@ -31,7 +31,7 @@ Ensure your code is deployed to a public cloud provider like Render.
 * **Authentication**: Select **API Key**.
   * **Key type**: `Header`
   * **Header name**: `X-API-Key`
-  * **Value**: Paste the `MCP_API_KEY` you created in the deployment step.
+  * **Value**: Paste the `MCP_API_KEY` value you created in the Render Environment Variables step.
 
 Click **Create** or **Add**. Copilot Studio will connect to your server and list the available tools (e.g., `move_large_file`, `bulk_move`).
 
