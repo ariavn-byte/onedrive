@@ -7,3 +7,4 @@ python-dotenv>=1.0.0
 mcp>=1.0.0
 sse-starlette>=1.8.0
 starlette>=0.32.0
+azure-identity>=1.15.0
