@@ -159,6 +159,14 @@ class APIKeyMiddleware:
                     provided_key = qs[API_KEY_NAME][0]
 
         if provided_key != API_KEY:
+            print(f"⚠️ Auth Failed for path: {path}")
+            if not provided_key:
+                print("   Reason: No API Key provided in headers or query.")
+            else:
+                print(f"   Reason: Key mismatch. Provided length: {len(provided_key)}, Expected length: {len(API_KEY)}")
+                # Do not log the full key for security, but maybe the first char helps
+                print(f"   Provided start: '{provided_key[:2]}***', Expected start: '{API_KEY[:2]}***'")
+
             response = Response("Unauthorized: Invalid API Key", status_code=401)
             return await response(scope, receive, send)
 
