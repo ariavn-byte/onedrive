@@ -94,22 +94,75 @@ def bulk_delete(file_ids: list[str], user_id: str = None) -> str:
         return f"Error in bulk delete: {str(e)}"
 
 
-# --- Authentication Middleware ---
-class APIKeyMiddleware(BaseHTTPMiddleware):
-    async def dispatch(self, request: Request, call_next):
+# --- Authentication & Compliance Middleware (Pure ASGI) ---
+class APIKeyMiddleware:
+    def __init__(self, app):
+        self.app = app
+
+    async def __call__(self, scope, receive, send):
+        if scope["type"] != "http":
+            return await self.app(scope, receive, send)
+
+        path = scope.get("path", "")
+
+        # 1. Compliance Fix for Copilot Studio
+        # Inject "text/event-stream" into Accept header if missing for /mcp endpoint
+        if path == "/mcp":
+            headers = list(scope["headers"])
+            accept_index = -1
+            accept_value = None
+
+            for i, (k, v) in enumerate(headers):
+                if k.lower() == b"accept":
+                    accept_index = i
+                    accept_value = v
+                    break
+
+            required_part = b"text/event-stream"
+            json_part = b"application/json"
+
+            if accept_index == -1:
+                # Missing Accept header -> Add it
+                headers.append((b"accept", b"application/json, text/event-stream"))
+            elif required_part not in accept_value:
+                # Incomplete Accept header -> Append required part
+                # Also ensure application/json is there
+                new_value = accept_value + b", " + required_part
+                if json_part not in new_value:
+                    new_value += b", " + json_part
+                headers[accept_index] = (b"accept", new_value)
+
+            scope["headers"] = headers
+
+        # 2. Authentication Check
         # Allow health check and root without auth
-        # FastMCP endpoints might differ, but usually /sse and /messages are used.
-        if request.url.path in ["/", "/health", "/docs", "/openapi.json"]:
-            return await call_next(request)
+        if path in ["/", "/health", "/docs", "/openapi.json"]:
+            return await self.app(scope, receive, send)
 
-        # Check for API Key in header or query
-        # Copilot Studio sends it in header if configured
-        key = request.headers.get(API_KEY_NAME) or request.query_params.get(API_KEY_NAME)
+        # Extract API Key from headers or query
+        api_key_name_bytes = API_KEY_NAME.lower().encode()
+        provided_key = None
 
-        if key != API_KEY:
-             return Response("Unauthorized: Invalid API Key", status_code=401)
+        # Check headers
+        for k, v in scope["headers"]:
+            if k.lower() == api_key_name_bytes:
+                provided_key = v.decode()
+                break
 
-        return await call_next(request)
+        # Check query params if not in header
+        if not provided_key:
+            query_string = scope.get("query_string", b"").decode()
+            if query_string:
+                from urllib.parse import parse_qs
+                qs = parse_qs(query_string)
+                if API_KEY_NAME in qs:
+                    provided_key = qs[API_KEY_NAME][0]
+
+        if provided_key != API_KEY:
+            response = Response("Unauthorized: Invalid API Key", status_code=401)
+            return await response(scope, receive, send)
+
+        return await self.app(scope, receive, send)
 
 # --- Server Setup ---
 
