@@ -1,11 +1,10 @@
 
 import os
+import json
 import uvicorn
-from contextlib import asynccontextmanager
-from fastapi import Request
-from starlette.middleware.base import BaseHTTPMiddleware
+from fastapi import FastAPI, Request
 from starlette.responses import Response
-from mcp.server.fastmcp import FastMCP
+from starlette.middleware.cors import CORSMiddleware
 
 # Import the existing OneDrive logic
 import function_app
@@ -15,31 +14,65 @@ from function_app import organizer
 API_KEY_NAME = "X-API-Key"
 API_KEY = os.environ.get("MCP_API_KEY", "copilot-studio-secret")
 
-# Define the FastMCP server
-# "OneDrive Organizer" is the name of the server
-mcp = FastMCP("OneDrive Organizer")
+# NOTE: We avoid FastMCP's StreamableHTTP due to strict Host validation behind ACA.
+# Implement a minimal JSON-RPC 2.0 HTTP endpoint for tools/list and tools/call.
 
-@mcp.tool()
-def move_large_file(file_id: str, new_parent_path: str, user_id: str = None) -> str:
+def move_large_file(drive_id: str, item_id: str, new_parent_id: str) -> str:
     """
-    Move a file of ANY size (including files > 5MB) to a new parent folder.
-    Use this tool when the native 'moveSmallFile' tool fails or for large files.
+    Move a file of ANY size (including files > 5MB) to a new parent folder using server-side Graph API.
+    This is a metadata-only operation, not a content transfer, so it works for files of any size.
 
     Args:
-        file_id: The ID of the file to move.
-        new_parent_path: The path of the folder to move the file into (e.g. "/Documents/Archive").
-        user_id: Optional user ID to act on behalf of.
+        drive_id: The ID of the drive containing the file (e.g., from Graph /users/{id}/drives).
+        item_id: The ID of the file to move.
+        new_parent_id: The ID of the destination parent folder.
+
+    Returns:
+        JSON with operationId, itemId, name, webUrl, and status="completed".
     """
-    # Reuse the existing logic which uses Graph API PATCH
-    # This implementation (PATCH /items/{id}) handles large files correctly
-    # because it is a metadata operation, not a content transfer.
     try:
-        result = organizer.move_file(file_id, new_parent_path, user_id)
+        result = organizer.move_large_file(drive_id, item_id, new_parent_id)
         return str(result)
     except Exception as e:
-        return f"Error moving file: {str(e)}"
+        return f"Error moving large file: {str(e)}"
 
-@mcp.tool()
+def copy_large_file(source_drive_id: str, item_id: str, target_drive_id: str, target_parent_id: str) -> str:
+    """
+    Copy a file of ANY size (including files > 5MB) to a new location using async Graph API.
+    This returns a monitor URL that must be polled to check completion status.
+
+    Args:
+        source_drive_id: The ID of the drive containing the source file.
+        item_id: The ID of the file to copy.
+        target_drive_id: The ID of the target drive (can be the same or different from source).
+        target_parent_id: The ID of the destination parent folder in the target drive.
+
+    Returns:
+        JSON with operationId, monitorUrl, and status="pending". Use pollCopyStatus to track completion.
+    """
+    try:
+        result = organizer.copy_large_file(source_drive_id, item_id, target_drive_id, target_parent_id)
+        return str(result)
+    except Exception as e:
+        return f"Error copying large file: {str(e)}"
+
+def poll_copy_status(monitor_url: str) -> str:
+    """
+    Poll the status of an async copy operation.
+    Use the monitorUrl returned from copy_large_file() to check completion.
+
+    Args:
+        monitor_url: The Location header URL returned from copy_large_file.
+
+    Returns:
+        JSON with operationId, status (completed/inProgress/failed), and newItemId when complete.
+    """
+    try:
+        result = organizer.poll_copy_status(monitor_url)
+        return str(result)
+    except Exception as e:
+        return f"Error polling copy status: {str(e)}"
+
 def list_files(folder_path: str = "/", limit: int = 20, user_id: str = None) -> str:
     """List files in a specific folder."""
     try:
@@ -48,7 +81,6 @@ def list_files(folder_path: str = "/", limit: int = 20, user_id: str = None) -> 
     except Exception as e:
         return f"Error listing files: {str(e)}"
 
-@mcp.tool()
 def create_folder(name: str, parent_path: str = "/", user_id: str = None) -> str:
     """Create a new folder."""
     try:
@@ -57,7 +89,6 @@ def create_folder(name: str, parent_path: str = "/", user_id: str = None) -> str
     except Exception as e:
         return f"Error creating folder: {str(e)}"
 
-@mcp.tool()
 def delete_file(file_id: str, user_id: str = None) -> str:
     """Delete a file."""
     try:
@@ -66,7 +97,6 @@ def delete_file(file_id: str, user_id: str = None) -> str:
     except Exception as e:
         return f"Error deleting file: {str(e)}"
 
-@mcp.tool()
 def upload_file(file_path: str, target_path: str, user_id: str = None) -> str:
     """Upload a file from local path to OneDrive."""
     try:
@@ -75,7 +105,6 @@ def upload_file(file_path: str, target_path: str, user_id: str = None) -> str:
     except Exception as e:
         return f"Error uploading file: {str(e)}"
 
-@mcp.tool()
 def bulk_move(file_ids: list[str], target_path: str, user_id: str = None) -> str:
     """Move multiple files at once."""
     try:
@@ -84,7 +113,6 @@ def bulk_move(file_ids: list[str], target_path: str, user_id: str = None) -> str
     except Exception as e:
         return f"Error in bulk move: {str(e)}"
 
-@mcp.tool()
 def bulk_delete(file_ids: list[str], user_id: str = None) -> str:
     """Delete multiple files at once."""
     try:
@@ -104,10 +132,33 @@ class APIKeyMiddleware:
             return await self.app(scope, receive, send)
 
         path = scope.get("path", "")
+        # 0. Normalize Host header for /mcp endpoint to fix Azure Container Apps issue
+        # Apply to any subpath under /mcp (e.g., /mcp, /mcp/, /mcp/tools, etc.)
+        if path.startswith("/mcp"):
+            # Rewrite Host and related headers to safe localhost values to satisfy FastMCP
+            headers = list(scope["headers"])
+
+            def upsert(name: bytes, value: bytes):
+                idx = -1
+                for i, (k, v) in enumerate(headers):
+                    if k.lower() == name:
+                        idx = i
+                        break
+                if idx == -1:
+                    headers.append((name, value))
+                else:
+                    headers[idx] = (name, value)
+
+            upsert(b"host", b"localhost")
+            upsert(b"x-forwarded-host", b"localhost")
+            upsert(b"origin", b"http://localhost")
+            scope["headers"] = headers
+
 
         # 1. Compliance Fix for Copilot Studio
         # Inject "text/event-stream" into Accept header if missing for /mcp endpoint
-        if path == "/mcp":
+        # Apply to any subpath under /mcp
+        if path.startswith("/mcp"):
             headers = list(scope["headers"])
             accept_index = -1
             accept_value = None
@@ -174,21 +225,109 @@ class APIKeyMiddleware:
 
 # --- Server Setup ---
 
-# Get the Starlette app from FastMCP
-# This app handles the MCP protocol (SSE and messages)
-app = mcp.streamable_http_app()
+# Create a minimal FastAPI app that serves JSON-RPC 2.0 over HTTP at /mcp
+app = FastAPI()
 
-# Add auth middleware to the app
-app.add_middleware(APIKeyMiddleware)
+# Add CORS middleware to allow cross-origin requests
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # Allow all origins (ACA ingress, Copilot Studio, etc.)
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
-# Add health check route
-async def health_check(request):
-    return Response('{"status": "healthy"}', media_type="application/json")
+@app.get("/health")
+async def health_check():
+    return {"status": "healthy"}
 
-app.add_route("/health", health_check, methods=["GET"])
+def get_tools_list():
+    # Minimal MCP-like tool descriptors for Copilot Studio
+    return [
+        {
+            "name": "move_large_file",
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "drive_id": {"type": "string"},
+                    "item_id": {"type": "string"},
+                    "new_parent_id": {"type": "string"}
+                },
+                "required": ["drive_id", "item_id", "new_parent_id"]
+            }
+        },
+        {
+            "name": "copy_large_file",
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "source_drive_id": {"type": "string"},
+                    "item_id": {"type": "string"},
+                    "target_drive_id": {"type": "string"},
+                    "target_parent_id": {"type": "string"}
+                },
+                "required": ["source_drive_id", "item_id", "target_drive_id", "target_parent_id"]
+            }
+        },
+        {
+            "name": "poll_copy_status",
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "monitor_url": {"type": "string"}
+                },
+                "required": ["monitor_url"]
+            }
+        }
+    ]
+
+@app.post("/mcp")
+async def mcp_jsonrpc(request: Request):
+    try:
+        body = await request.json()
+    except Exception as e:
+        return Response(json.dumps({"jsonrpc": "2.0", "error": {"code": -32700, "message": f"Parse error: {str(e)}"}}), media_type="application/json", status_code=400)
+    
+    jsonrpc = body.get("jsonrpc")
+    req_id = body.get("id")
+    method = body.get("method")
+    params = body.get("params") or {}
+
+    # Basic JSON-RPC validation
+    if jsonrpc != "2.0":
+        return Response(json.dumps({"jsonrpc": "2.0", "id": req_id, "error": {"code": -32600, "message": "Invalid Request: jsonrpc must be '2.0'"}}), media_type="application/json", status_code=400)
+
+    if method == "tools/list":
+        result = {"tools": get_tools_list()}
+        return Response(json.dumps({"jsonrpc": "2.0", "id": req_id, "result": result}), media_type="application/json")
+
+    if method == "tools/call":
+        name = params.get("name")
+        args = params.get("arguments") or {}
+
+        try:
+            if name == "move_large_file":
+                output = move_large_file(args.get("drive_id"), args.get("item_id"), args.get("new_parent_id"))
+            elif name == "copy_large_file":
+                output = copy_large_file(args.get("source_drive_id"), args.get("item_id"), args.get("target_drive_id"), args.get("target_parent_id"))
+            elif name == "poll_copy_status":
+                output = poll_copy_status(args.get("monitor_url"))
+            else:
+                return Response(json.dumps({"jsonrpc": "2.0", "id": req_id, "error": {"code": -32601, "message": f"Unknown tool: {name}"}}), media_type="application/json", status_code=404)
+
+            return Response(json.dumps({"jsonrpc": "2.0", "id": req_id, "result": {"output": output}}), media_type="application/json")
+        except Exception as e:
+            return Response(json.dumps({"jsonrpc": "2.0", "id": req_id, "error": {"code": -32000, "message": str(e)}}), media_type="application/json", status_code=500)
+
+    # Unsupported method
+    return Response(json.dumps({"jsonrpc": "2.0", "id": req_id, "error": {"code": -32601, "message": f"Unknown method: {method}"}}), media_type="application/json", status_code=404)
 
 if __name__ == "__main__":
-    # Get port from environment variable (Render sets this)
+    # Get port from environment variable (Azure Container Apps sets this)
     port = int(os.environ.get("PORT", 8000))
-    # Run the Starlette app
-    uvicorn.run(app, host="0.0.0.0", port=port)
+    
+    # Wrap the app with middleware at the outermost level
+    wrapped_app = APIKeyMiddleware(app)
+
+    # Run the wrapped FastAPI app
+    uvicorn.run(wrapped_app, host="0.0.0.0", port=port)

@@ -28,7 +28,11 @@ ALLOWED_TOOLS = [
     "get_storage_usage",
     "bulk_move",
     "bulk_delete",
-    "bulk_copy"
+    "bulk_copy",
+    # Large file operations
+    "move_large_file",
+    "copy_large_file",
+    "poll_copy_status"
 ]
 
 class OneDriveOrganizer:
@@ -429,6 +433,163 @@ class OneDriveOrganizer:
                 results.append({"file_id": file_id, "status": "error", "error": str(e)})
         return {"results": results}
     
+    def move_large_file(self, drive_id: str, item_id: str, new_parent_id: str) -> Dict[str, Any]:
+        """
+        Move a large file (any size, including >5MB) to a new parent folder using Graph API.
+        This is a server-side operation that doesn't transfer file content.
+        
+        Args:
+            drive_id: The drive ID containing the file
+            item_id: The ID of the file to move
+            new_parent_id: The ID of the destination parent folder
+        
+        Returns:
+            Dictionary with operation status and new file metadata
+        """
+        endpoint = f"/drives/{drive_id}/items/{item_id}"
+        data = {
+            "parentReference": {
+                "id": new_parent_id
+            }
+        }
+        
+        result = self._make_request('PATCH', endpoint, json=data)
+        
+        # Return minimal response (id, name, path) to avoid Copilot Studio payload issues
+        return {
+            "operationId": result.get('id'),
+            "itemId": result.get('id'),
+            "name": result.get('name'),
+            "webUrl": result.get('webUrl'),
+            "parentReference": result.get('parentReference'),
+            "status": "completed"
+        }
+    
+    def copy_large_file(self, source_drive_id: str, item_id: str, target_drive_id: str, target_parent_id: str) -> Dict[str, Any]:
+        """
+        Copy a large file (any size, including >5MB) to a new location using Graph API async copy.
+        This returns a monitor URL that must be polled to check completion status.
+        
+        Args:
+            source_drive_id: The drive ID of the source file
+            item_id: The ID of the file to copy
+            target_drive_id: The drive ID of the target location
+            target_parent_id: The ID of the destination parent folder
+        
+        Returns:
+            Dictionary with operationId and monitor URL for polling
+        """
+        endpoint = f"/drives/{source_drive_id}/items/{item_id}/copy"
+        data = {
+            "parentReference": {
+                "driveId": target_drive_id,
+                "id": target_parent_id
+            }
+        }
+        
+        # Make request and capture the Location header from response
+        if not self.access_token:
+            self._authenticate()
+        
+        headers = {
+            'Authorization': f'Bearer {self.access_token}',
+            'Content-Type': 'application/json'
+        }
+        
+        url = f"{GRAPH_BASE_URL}{endpoint}"
+        response = requests.post(url, headers=headers, json=data)
+        
+        if response.status_code in [200, 202]:
+            # 202 means async operation accepted
+            monitor_url = response.headers.get('Location')
+            operation_id = response.headers.get('X-Microsoft-AsyncOperation-Id', 'unknown')
+            
+            return {
+                "operationId": operation_id,
+                "monitorUrl": monitor_url,
+                "status": "pending",
+                "message": "Copy operation initiated. Use pollCopyStatus to check completion."
+            }
+        else:
+            error_detail = response.text
+            try:
+                error_json = response.json()
+                if 'error' in error_json:
+                    error_detail = error_json['error'].get('message', error_detail)
+            except:
+                pass
+            
+            raise Exception(f"Copy operation failed: {response.status_code} - {error_detail}")
+    
+    def poll_copy_status(self, monitor_url: str) -> Dict[str, Any]:
+        """
+        Poll the status of an async copy operation.
+        Use the monitor URL returned from copy_large_file().
+        
+        Args:
+            monitor_url: The Location header URL returned from copy_large_file
+        
+        Returns:
+            Dictionary with operation status and newItemId when complete
+        """
+        if not self.access_token:
+            self._authenticate()
+        
+        headers = {
+            'Authorization': f'Bearer {self.access_token}',
+            'Content-Type': 'application/json'
+        }
+        
+        # Poll the monitor URL (usually takes a few seconds to a minute depending on file size)
+        response = requests.get(monitor_url, headers=headers)
+        
+        if response.status_code in [200, 201]:
+            result = response.json()
+            
+            # Check operation status
+            status = result.get('status', 'unknown')
+            
+            if status == 'completed':
+                # Extract the new item ID from the resourceId
+                resource_id = result.get('resourceId')
+                
+                return {
+                    "operationId": result.get('id'),
+                    "status": "completed",
+                    "newItemId": resource_id,
+                    "message": "Copy operation completed successfully"
+                }
+            elif status == 'inProgress':
+                return {
+                    "operationId": result.get('id'),
+                    "status": "inProgress",
+                    "percentComplete": result.get('percentageComplete', 0),
+                    "message": "Copy operation still in progress"
+                }
+            elif status == 'failed':
+                return {
+                    "operationId": result.get('id'),
+                    "status": "failed",
+                    "error": result.get('error', 'Unknown error'),
+                    "message": "Copy operation failed"
+                }
+            else:
+                return {
+                    "operationId": result.get('id'),
+                    "status": status,
+                    "message": f"Copy operation status: {status}"
+                }
+        else:
+            error_detail = response.text
+            try:
+                error_json = response.json()
+                if 'error' in error_json:
+                    error_detail = error_json['error'].get('message', error_detail)
+            except:
+                pass
+            
+            raise Exception(f"Failed to poll copy status: {response.status_code} - {error_detail}")
+    
     def organize_files(self, rules: List[Dict[str, Any]]) -> Dict[str, Any]:
         """Organize files based on specified rules"""
         results = []
@@ -651,6 +812,32 @@ def _handle(tool: str, data: Dict[str, Any]) -> Dict[str, Any]:
             if not file_ids or not target_path:
                 return {"success": False, "error": "File IDs and target path are required"}
             result = organizer.bulk_copy(file_ids, target_path, user_id)
+            return {"success": True, "data": result}
+        
+        elif tool == "move_large_file":
+            drive_id = data.get('drive_id')
+            item_id = data.get('item_id')
+            new_parent_id = data.get('new_parent_id')
+            if not drive_id or not item_id or not new_parent_id:
+                return {"success": False, "error": "drive_id, item_id, and new_parent_id are required"}
+            result = organizer.move_large_file(drive_id, item_id, new_parent_id)
+            return {"success": True, "data": result}
+        
+        elif tool == "copy_large_file":
+            source_drive_id = data.get('source_drive_id')
+            item_id = data.get('item_id')
+            target_drive_id = data.get('target_drive_id')
+            target_parent_id = data.get('target_parent_id')
+            if not source_drive_id or not item_id or not target_drive_id or not target_parent_id:
+                return {"success": False, "error": "source_drive_id, item_id, target_drive_id, and target_parent_id are required"}
+            result = organizer.copy_large_file(source_drive_id, item_id, target_drive_id, target_parent_id)
+            return {"success": True, "data": result}
+        
+        elif tool == "poll_copy_status":
+            monitor_url = data.get('monitor_url')
+            if not monitor_url:
+                return {"success": False, "error": "monitor_url is required"}
+            result = organizer.poll_copy_status(monitor_url)
             return {"success": True, "data": result}
         
         else:
