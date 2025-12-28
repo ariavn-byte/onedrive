@@ -1,0 +1,17 @@
+{
+  "api": {
+    "oauth2PermissionScopes": [
+      {
+        "adminConsentDescription": "Allow access to OneDrive MCP Server",
+        "adminConsentDisplayName": "Access MCP Server",
+        "id": "996e5a71-7ab4-449e-948e-950a8d845a66",
+        "isEnabled": true,
+        "type": "User",
+        "userConsentDescription": "Allow access to OneDrive MCP Server",
+        "userConsentDisplayName": "Access MCP Server",
+        "value": "access_as_user"
+      }
+    ]
+  }
+}
+

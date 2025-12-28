@@ -1,8 +1,10 @@
 import json
 import requests
 import time
+import os
 from datetime import datetime, timedelta
 from typing import Dict, Any, List
+from azure.identity import ManagedIdentityCredential, ClientSecretCredential
 import auth
 
 # Microsoft Graph API endpoints
@@ -38,31 +40,38 @@ ALLOWED_TOOLS = [
 class OneDriveOrganizer:
     def __init__(self):
         self.access_token = None
+        self.credential = None
         # Don't authenticate immediately - wait until first request
     
     def _authenticate(self):
-        """Authenticate with Microsoft Graph API using client credentials flow"""
+        """Authenticate with Microsoft Graph API using Managed Identity or client credentials"""
         if self.access_token:
             return  # Already authenticated
         
-        # Check if we have credentials
-        if not auth.client_id or not auth.client_secret or not auth.tenant_id:
-            raise Exception("Missing Microsoft Graph API credentials. Please check your .env file.")
-
-        token_url = f"https://login.microsoftonline.com/{auth.tenant_id}/oauth2/v2.0/token"
-
-        data = {
-            'grant_type': 'client_credentials',
-            'client_id': auth.client_id,
-            'client_secret': auth.client_secret,
-            'scope': 'https://graph.microsoft.com/.default'
-        }
-
-        response = requests.post(token_url, data=data)
-        if response.status_code == 200:
-            self.access_token = response.json()['access_token']
-        else:
-            raise Exception(f"Authentication failed: {response.text}")
+        # Try Managed Identity first (when running on Azure)
+        try:
+            if not self.credential:
+                # Check if running on Azure with Managed Identity
+                if os.environ.get("MSI_ENDPOINT") or os.environ.get("IDENTITY_ENDPOINT"):
+                    print("🔐 Using Managed Identity for authentication")
+                    self.credential = ManagedIdentityCredential()
+                # Fall back to client credentials
+                elif auth.client_id and auth.client_secret and auth.tenant_id:
+                    print("🔐 Using Client Credentials for authentication")
+                    self.credential = ClientSecretCredential(
+                        tenant_id=auth.tenant_id,
+                        client_id=auth.client_id,
+                        client_secret=auth.client_secret
+                    )
+                else:
+                    raise Exception("No authentication method available. Configure Managed Identity or client credentials.")
+            
+            # Get token from credential
+            token = self.credential.get_token("https://graph.microsoft.com/.default")
+            self.access_token = token.token
+            
+        except Exception as e:
+            raise Exception(f"Authentication failed: {str(e)}")
     
     def _make_request(self, method: str, endpoint: str, max_retries: int = 3, **kwargs) -> Dict[str, Any]:
         """Make authenticated request to Microsoft Graph API with retry logic"""

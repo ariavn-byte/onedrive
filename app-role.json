@@ -1,0 +1,10 @@
+[
+  {
+    "allowedMemberTypes": ["Application", "User"],
+    "description": "Access MCP server",
+    "displayName": "MCP.Access",
+    "id": "76288490-d1bb-4449-ad71-eafa5eb63b1f",
+    "isEnabled": true,
+    "value": "MCP.Access"
+  }
+]
